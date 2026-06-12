@@ -7,12 +7,13 @@ const {
   ButtonStyle,
   PermissionFlagsBits,
   ChannelType,
+  EmbedBuilder,
 } = require('discord.js');
 const { getDb, get, run } = require('../utils/db');
 const {
   applicationEmbed, welcomeEmbed,
   approvedEmbed, rejectedSubmissionEmbed,
-  errorEmbed,
+  errorEmbed, GOLD,
 } = require('../utils/embeds');
 
 module.exports = {
@@ -359,6 +360,119 @@ module.exports = {
               .setDisabled(true)
           ),
         ],
+      });
+    }
+
+    // ─── Button: Open Payout Modal ───────────────────────────────────────────
+    if (interaction.isButton() && interaction.customId.startsWith('open_payout_modal_')) {
+      const userId = interaction.customId.replace('open_payout_modal_', '');
+      if (interaction.user.id !== userId) return;
+
+      const modal = new ModalBuilder()
+        .setCustomId(`payout_modal_${userId}`)
+        .setTitle('Request Payout');
+
+      const amountInput = new TextInputBuilder()
+        .setCustomId('payout_amount')
+        .setLabel('Amount (R$) or type "all"')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('e.g. 5000 or all')
+        .setRequired(true);
+
+      const gampassInput = new TextInputBuilder()
+        .setCustomId('gamepass_link')
+        .setLabel('Roblox Gamepass Link (exact amount)')
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder('https://www.roblox.com/game-pass/...')
+        .setRequired(true);
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(amountInput),
+        new ActionRowBuilder().addComponents(gampassInput),
+      );
+
+      return interaction.showModal(modal);
+    }
+
+    // ─── Modal Submit: Payout Request ────────────────────────────────────────
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('payout_modal_')) {
+      await getDb();
+
+      const amountRaw = interaction.fields.getTextInputValue('payout_amount').trim().toLowerCase();
+      const gampassLink = interaction.fields.getTextInputValue('gamepass_link').trim();
+
+      if (!gampassLink.includes('roblox.com/game-pass')) {
+        return interaction.reply({
+          embeds: [errorEmbed('Please provide a valid Roblox gamepass link (roblox.com/game-pass/...).')],
+          ephemeral: true,
+        });
+      }
+
+      const eligible = require('../utils/db').all(
+        `SELECT * FROM submissions WHERE user_id = ? AND status = 'verified' ORDER BY submitted_at ASC`,
+        [interaction.user.id]
+      );
+
+      const totalEligible = Math.floor(eligible.reduce((sum, s) => sum + s.robux_owed, 0));
+      let requestedAmount;
+
+      if (amountRaw === 'all') {
+        requestedAmount = totalEligible;
+      } else {
+        requestedAmount = parseInt(amountRaw);
+        if (isNaN(requestedAmount) || requestedAmount <= 0) {
+          return interaction.reply({
+            embeds: [errorEmbed('Invalid amount. Enter a number or "all".')],
+            ephemeral: true,
+          });
+        }
+      }
+
+      if (requestedAmount < 1000) {
+        return interaction.reply({
+          embeds: [errorEmbed(`Minimum payout is **1,000 R$**. You requested ${requestedAmount.toLocaleString()} R$.`)],
+          ephemeral: true,
+        });
+      }
+
+      if (requestedAmount > totalEligible) {
+        return interaction.reply({
+          embeds: [errorEmbed(`You only have **${totalEligible.toLocaleString()} R$** eligible. You can't request more than that.`)],
+          ephemeral: true,
+        });
+      }
+
+      // Post payout request in staff submissions channel
+      const staffChannel = await interaction.guild.channels
+        .fetch(process.env.CREATOR_SUBMISSIONS_CHANNEL_ID)
+        .catch(() => null);
+
+      if (staffChannel) {
+        const subIds = eligible.map(s => `#${s.id}`).join(', ');
+        await staffChannel.send({
+          embeds: [new EmbedBuilder()
+            .setColor(GOLD)
+            .setTitle('💰 Payout Request')
+            .addFields(
+              { name: 'Creator', value: `<@${interaction.user.id}>`, inline: true },
+              { name: 'Requested Amount', value: `${requestedAmount.toLocaleString()} R$`, inline: true },
+              { name: 'Total Eligible', value: `${totalEligible.toLocaleString()} R$`, inline: true },
+              { name: 'Gamepass Link', value: gampassLink },
+              { name: 'Eligible Submission IDs', value: subIds },
+            )
+            .setFooter({ text: 'Verify gamepass price matches requested amount before paying' })],
+        });
+      }
+
+      await interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor(GOLD)
+          .setTitle('Payout Request Sent ✅')
+          .setDescription(
+            `Your payout request of **${requestedAmount.toLocaleString()} R$** has been sent to staff.\n` +
+            `You'll be notified here once it's processed (within 72 hours).`
+          )],
+        ephemeral: true,
       });
     }
   },

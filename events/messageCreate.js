@@ -54,6 +54,7 @@ module.exports = {
     const tierLabels = { tier1: 'Tier 1', tier2: 'Tier 2', tier3: 'Tier 3' };
     const tierName = tierLabels[creator.tier] || 'Tier 3';
 
+    // Confirm to creator
     await message.reply({
       embeds: [
         new EmbedBuilder()
@@ -73,45 +74,57 @@ module.exports = {
       ],
     });
 
-    const staffChannel = await message.guild.channels
-      .fetch(process.env.CREATOR_SUBMISSIONS_CHANNEL_ID)
-      .catch(() => null);
-
-    if (staffChannel) {
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setCustomId(`approve_submission_${submission.id}`)
-          .setLabel('Approve')
-          .setStyle(ButtonStyle.Success)
-          .setEmoji('✅'),
-        new ButtonBuilder()
-          .setCustomId(`reject_submission_${submission.id}`)
-          .setLabel('Reject')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('❌')
-      );
-
-      const isVideo = (proofFile.contentType || '').startsWith('video') || /\.(mp4|mov|webm)$/i.test(proofFile.name || '');
-
-      const staffEmbed = new EmbedBuilder()
-        .setColor(GOLD)
-        .setTitle('New Submission — Proof Attached')
-        .addFields(
-          { name: 'Creator', value: `<@${creator.user_id}>`, inline: true },
-          { name: 'Platform', value: submission.platform, inline: true },
-          { name: 'Tier', value: tierName, inline: true },
-          { name: 'URL', value: submission.video_url },
-          { name: 'Views', value: Number(submission.views_at_submission).toLocaleString(), inline: true },
-          { name: 'Robux Owed', value: `${Number(submission.robux_owed).toLocaleString()} R$`, inline: true },
-          { name: 'Proof', value: isVideo ? `[View Recording](${proofFile.url})` : `[View Screenshot](${proofFile.url})`, inline: true },
-          { name: 'Submission ID', value: `#${submission.id}`, inline: true },
-        )
-        .setFooter({ text: 'Godlyo Creator Program' });
-
-      // Only embed image if it's not a video
-      if (!isVideo) staffEmbed.setImage(proofFile.url);
-
-      await staffChannel.send({ embeds: [staffEmbed], components: [row] });
+    // Forward to staff channel
+    const staffChannelId = process.env.CREATOR_SUBMISSIONS_CHANNEL_ID;
+    if (!staffChannelId) {
+      console.error('CREATOR_SUBMISSIONS_CHANNEL_ID not set');
+      return;
     }
+
+    const staffChannel = await message.guild.channels.fetch(staffChannelId).catch(e => {
+      console.error('Failed to fetch staff channel:', e.message);
+      return null;
+    });
+
+    if (!staffChannel) {
+      console.error('Staff channel not found, ID:', staffChannelId);
+      return;
+    }
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`approve_submission_${submission.id}`)
+        .setLabel('Approve')
+        .setStyle(ButtonStyle.Success)
+        .setEmoji('✅'),
+      new ButtonBuilder()
+        .setCustomId(`reject_submission_${submission.id}`)
+        .setLabel('Reject')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('❌')
+    );
+
+    const isVideo = (proofFile.contentType || '').startsWith('video') || /\.(mp4|mov|webm)$/i.test(proofFile.name || '');
+
+    const staffEmbed = new EmbedBuilder()
+      .setColor(GOLD)
+      .setTitle('New Submission — Proof Attached')
+      .addFields(
+        { name: 'Creator', value: `<@${creator.user_id}>`, inline: true },
+        { name: 'Platform', value: submission.platform, inline: true },
+        { name: 'Tier', value: tierName, inline: true },
+        { name: 'Video URL', value: submission.video_url },
+        { name: 'Views', value: Number(submission.views_at_submission).toLocaleString(), inline: true },
+        { name: 'Robux Owed', value: `${Number(submission.robux_owed).toLocaleString()} R$`, inline: true },
+        { name: 'Proof', value: `[${isVideo ? 'View Recording' : 'View Screenshot'}](${proofFile.url})`, inline: true },
+        { name: 'Submission ID', value: `#${submission.id}`, inline: true },
+      )
+      .setFooter({ text: 'Godlyo Creator Program' });
+
+    if (!isVideo) staffEmbed.setImage(proofFile.url);
+
+    await staffChannel.send({ embeds: [staffEmbed], components: [row] }).catch(e => {
+      console.error('Failed to send to staff channel:', e.message);
+    });
   },
 };

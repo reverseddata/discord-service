@@ -26,7 +26,7 @@ client.commands = new Collection();
 const commandsData = [];
 
 // Regular commands
-const cmdFiles = ['apply-setup.js', 'submit.js', 'payout-history.js', 'embed.js'];
+const cmdFiles = ['apply-setup.js', 'submit.js', 'payout-history.js', 'embed.js', 'request-payout.js'];
 for (const file of cmdFiles) {
   const cmd = require(path.join(__dirname, 'commands', file));
   client.commands.set(cmd.data.name, cmd);

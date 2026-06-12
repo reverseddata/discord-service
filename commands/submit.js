@@ -106,7 +106,6 @@ module.exports = {
           .setDescription(
             `Almost done! Please upload a **screen recording** of your full video analytics.\n\n` +
             `**Your recording must clearly show:**\n` +
-            `→ The video URL or title\n` +
             `→ View count matching your submitted number (**${views.toLocaleString()} views**)\n` +
             `→ Full analytics page (likes, comments, watch time visible)\n\n` +
             `Upload the recording as a file in this channel. Your submission will be forwarded to staff once received.`
