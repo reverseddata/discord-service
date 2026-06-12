@@ -58,6 +58,10 @@ async function getDb() {
     )
   `);
 
+  // Migrations — safely add new columns to existing DBs
+  try { db.run(`ALTER TABLE creators ADD COLUMN weekly_cap INTEGER DEFAULT 15000`); } catch(e) {}
+  try { db.run(`ALTER TABLE creators ADD COLUMN custom_rate INTEGER DEFAULT NULL`); } catch(e) {}
+
   save();
   return db;
 }
