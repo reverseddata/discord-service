@@ -22,7 +22,7 @@ module.exports = {
     // ─── Slash Commands ─────────────────────────────────────────────────────
     if (interaction.isChatInputCommand()) {
       // Staff commands are exported differently
-      const staffCmds = ['setfollowers', 'creatorlist', 'markpaid', 'removecreator', 'changetier'];
+      const staffCmds = ['setfollowers', 'creatorlist', 'markpaid', 'removecreator', 'changetier', 'setrate', 'setcap'];
       if (staffCmds.includes(interaction.commandName)) {
         const staffModule = require('../commands/staff.js');
         const cmd = staffModule[interaction.commandName.replace('-', '')];

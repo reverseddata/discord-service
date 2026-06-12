@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getDb, get, all } = require('../utils/db');
+const { getDb, get, all, getWeeklyRobux } = require('../utils/db');
 const { errorEmbed, GOLD } = require('../utils/embeds');
 
 module.exports = {
@@ -33,16 +33,6 @@ module.exports = {
       [interaction.user.id]
     );
 
-    if (submissions.length === 0) {
-      return interaction.reply({
-        embeds: [new EmbedBuilder()
-          .setColor(GOLD)
-          .setTitle('Your Payout History')
-          .setDescription('No submissions yet. Use `/submit` to submit your first video!')],
-        ephemeral: true,
-      });
-    }
-
     const totalEarned = submissions
       .filter(s => s.status === 'paid')
       .reduce((sum, s) => sum + s.robux_owed, 0);
@@ -50,6 +40,9 @@ module.exports = {
     const totalPending = submissions
       .filter(s => s.status === 'verified' || s.status === 'pending_review')
       .reduce((sum, s) => sum + s.robux_owed, 0);
+
+    const weeklyUsed = getWeeklyRobux(interaction.user.id);
+    const cap = creator.weekly_cap || 15000;
 
     const statusEmoji = {
       pending_proof: '📸',
@@ -59,23 +52,29 @@ module.exports = {
       rejected: '❌',
     };
 
-    const fields = submissions.map(s => {
-      const date = new Date(s.submitted_at).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric',
-      });
-      const emoji = statusEmoji[s.status] || '?';
-      return {
-        name: `${emoji} ${s.platform} — ${date}`,
-        value: `${Number(s.views_at_submission).toLocaleString()} views | **${Number(s.robux_owed).toLocaleString()} R$** | ${s.status.replace('_', ' ')}`,
-      };
-    });
+    const fields = submissions.length === 0
+      ? [{ name: 'No submissions yet', value: 'Use `/submit` to submit your first video!' }]
+      : submissions.map(s => {
+          const date = new Date(s.submitted_at).toLocaleDateString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+          });
+          const emoji = statusEmoji[s.status] || '?';
+          return {
+            name: `${emoji} ${s.platform} — ${date} (ID: #${s.id})`,
+            value: `${Number(s.views_at_submission).toLocaleString()} views | **${Number(s.robux_owed).toLocaleString()} R$** | ${s.status.replace('_', ' ')}`,
+          };
+        });
 
     const embed = new EmbedBuilder()
       .setColor(GOLD)
       .setTitle('Your Payout History')
       .addFields(fields)
       .setFooter({
-        text: `Total earned: ${totalEarned.toLocaleString()} R$ | Total pending: ${totalPending.toLocaleString()} R$`,
+        text: [
+          `Total earned: ${totalEarned.toLocaleString()} R$`,
+          `Pending: ${totalPending.toLocaleString()} R$`,
+          `This week: ${weeklyUsed.toLocaleString()} / ${cap.toLocaleString()} R$`,
+        ].join(' • '),
       });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });

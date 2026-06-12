@@ -34,8 +34,8 @@ for (const file of cmdFiles) {
 }
 
 // Staff commands (multi-export)
-const { setfollowers, creatorlist, markpaid, removecreator, changetier } = require('./commands/staff');
-for (const cmd of [setfollowers, creatorlist, markpaid, removecreator, changetier]) {
+const { setfollowers, creatorlist, markpaid, removecreator, changetier, setrate, setcap } = require('./commands/staff');
+for (const cmd of [setfollowers, creatorlist, markpaid, removecreator, changetier, setrate, setcap]) {
   client.commands.set(cmd.data.name, cmd);
   commandsData.push(cmd.data.toJSON());
 }

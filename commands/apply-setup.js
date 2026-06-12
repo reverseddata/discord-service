@@ -31,13 +31,20 @@ module.exports = {
           .setColor(GOLD)
           .setTitle('👑 Introducing the Godlyo Creator Program')
           .setDescription(
-            'Earn **Robux and Godlys** by making videos about Godlyo.\n\n' +
+            'Earn **Robux** by making videos about Godlyo.\n\n' +
             'Create content around trading, buying/selling, or anything else Godlyo-related — and get paid per 10,000 views.\n\n' +
             '**Payout Rates (per 10,000 views)**\n' +
             '> 🥉 **Tier 3** — 0 to 1,000 followers → **1,000 R$**\n' +
             '> 🥈 **Tier 2** — 1,000 to 10,000 followers → **1,200 R$**\n' +
             '> 🥇 **Tier 1** — 10,000+ followers → **1,500 R$**\n\n' +
-            '*Tier is determined by your follower count at time of submission.*'
+            '**Good performing creators** may receive a custom rate upon request.\n\n' +
+            '**Payouts are in Robux only.**\n' +
+            'Minimum payout amount: **1,000 R$**\n' +
+            'Weekly cap: **15,000 R$** *(can be increased upon request for high performers)*\n\n' +
+            '**Bonuses for top creators:**\n' +
+            '→ Free Godlys\n' +
+            '→ Godlyo Plus subscription\n\n' +
+            '*Tier and cap are determined at submission time.*'
           )
           .setFooter({ text: 'Godlyo Creator Program • godlyo.com' }),
       ],

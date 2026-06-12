@@ -5,7 +5,15 @@ const {
 } = require('discord.js');
 
 const FOOTER = 'Godlyo.com - the only marketplace you need';
-const WHITE = 0xFFFFFF;
+
+const COLORS = {
+  gold: 0xF5A623,
+  white: 0xFFFFFF,
+  black: 0x000000,
+  green: 0x2ECC71,
+  red: 0xE74C3C,
+  blue: 0x3498DB,
+};
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,6 +30,19 @@ module.exports = {
       opt.setName('channel').setDescription('Channel to post in (default: current channel)').setRequired(false)
     )
     .addStringOption(opt =>
+      opt.setName('color')
+        .setDescription('Embed color (default: gold)')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Gold (default)', value: 'gold' },
+          { name: 'White', value: 'white' },
+          { name: 'Black', value: 'black' },
+          { name: 'Green', value: 'green' },
+          { name: 'Red', value: 'red' },
+          { name: 'Blue', value: 'blue' },
+        )
+    )
+    .addStringOption(opt =>
       opt.setName('image').setDescription('Image URL to attach to the embed').setRequired(false)
     )
     .addStringOption(opt =>
@@ -32,15 +53,15 @@ module.exports = {
     const title = interaction.options.getString('title');
     const description = interaction.options.getString('description').replace(/\\n/g, '\n');
     const channel = interaction.options.getChannel('channel') || interaction.channel;
+    const colorKey = interaction.options.getString('color') || 'gold';
     const image = interaction.options.getString('image');
     const ping = interaction.options.getString('ping');
 
     const embed = new EmbedBuilder()
-      .setColor(WHITE)
+      .setColor(COLORS[colorKey])
       .setTitle(title)
       .setDescription(description)
-      .setFooter({ text: FOOTER })
-      .setTimestamp();
+      .setFooter({ text: FOOTER });
 
     if (image) embed.setImage(image);
 

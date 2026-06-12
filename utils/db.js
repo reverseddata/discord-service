@@ -2,7 +2,7 @@ const initSqlJs = require('sql.js');
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'godlyo.db');
+const DB_PATH = '/app/data/godlyo.db';
 
 let db;
 
@@ -31,10 +31,12 @@ async function getDb() {
       avg_views TEXT,
       content_type TEXT,
       follower_count INTEGER DEFAULT 0,
-      tier TEXT DEFAULT 'nano',
+      tier TEXT DEFAULT 'tier3',
       private_channel_id TEXT,
       accepted_at TIMESTAMP,
-      status TEXT DEFAULT 'pending'
+      status TEXT DEFAULT 'pending',
+      weekly_cap INTEGER DEFAULT 15000,
+      custom_rate INTEGER DEFAULT NULL
     )
   `);
 
@@ -111,4 +113,21 @@ function calcRobux(views, tierKey) {
   return Math.floor((views / 10000) * rate);
 }
 
-module.exports = { getDb, run, get, all, save, getTier, calcRobux };
+function getWeeklyRobux(userId) {
+  // Monday 00:00 of current week
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1) - day;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diff);
+  monday.setHours(0, 0, 0, 0);
+
+  const rows = all(
+    `SELECT robux_owed FROM submissions
+     WHERE user_id = ? AND status IN ('verified','paid') AND submitted_at >= ?`,
+    [userId, monday.toISOString()]
+  );
+  return rows.reduce((sum, r) => sum + (r.robux_owed || 0), 0);
+}
+
+module.exports = { getDb, run, get, all, save, getTier, calcRobux, getWeeklyRobux };

@@ -2,7 +2,7 @@ const {
   SlashCommandBuilder,
   EmbedBuilder,
 } = require('discord.js');
-const { getDb, get, run, getTier, calcRobux } = require('../utils/db');
+const { getDb, get, run, getTier, getWeeklyRobux } = require('../utils/db');
 const { errorEmbed, GOLD } = require('../utils/embeds');
 
 function parsePlatform(url) {
@@ -55,14 +55,32 @@ module.exports = {
       });
     }
 
-    // Use tier from creator's current tier in DB (set by staff or /changetier)
-    const tierName = creator.tier
-      ? creator.tier.charAt(0).toUpperCase() + creator.tier.slice(1)
-      : 'Tier3';
-
-    const tierRates = { tier1: 1500, tier2: 1200, tier3: 1000 };
-    const rate = tierRates[creator.tier] || 1000;
+    // Determine rate: custom_rate overrides tier
+    const tierKey = creator.tier || 'tier3';
+    const { name: tierName, rate: tierRate } = getTier(tierKey);
+    const rate = creator.custom_rate || tierRate;
     const robux = Math.floor((views / 10000) * rate);
+
+    // Check weekly cap
+    const weeklyUsed = getWeeklyRobux(interaction.user.id);
+    const cap = creator.weekly_cap || 15000;
+    const remaining = cap - weeklyUsed;
+
+    if (remaining <= 0) {
+      return interaction.reply({
+        embeds: [new EmbedBuilder()
+          .setColor(0xE74C3C)
+          .setTitle('Weekly Cap Reached')
+          .setDescription(
+            `You've reached your weekly cap of **${cap.toLocaleString()} R$**.\n` +
+            `Your cap resets every Monday. If you think this should be increased, contact <@&${process.env.STAFF_ROLE_ID}>.`
+          )],
+        ephemeral: true,
+      });
+    }
+
+    const effectiveRobux = Math.min(robux, remaining);
+    const capped = effectiveRobux < robux;
 
     const now = new Date().toISOString();
     run(
@@ -70,13 +88,15 @@ module.exports = {
         (user_id, video_url, platform, submitted_at,
          views_at_submission, follower_count_at_submission, robux_owed, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending_proof')`,
-      [interaction.user.id, videoUrl, platform, now, views, 0, robux]
+      [interaction.user.id, videoUrl, platform, now, views, 0, effectiveRobux]
     );
 
     const submission = get(
       'SELECT id FROM submissions WHERE user_id = ? ORDER BY id DESC LIMIT 1',
       [interaction.user.id]
     );
+
+    const rateLabel = creator.custom_rate ? `${rate} R$ (custom rate)` : `${rate} R$ (${tierName})`;
 
     await interaction.reply({
       embeds: [
@@ -94,8 +114,9 @@ module.exports = {
           .addFields(
             { name: 'Platform', value: platform, inline: true },
             { name: 'Views submitted', value: views.toLocaleString(), inline: true },
-            { name: 'Tier', value: tierName, inline: true },
-            { name: 'Robux if approved', value: `${robux.toLocaleString()} R$`, inline: true },
+            { name: 'Rate', value: rateLabel, inline: true },
+            { name: 'Robux if approved', value: `${effectiveRobux.toLocaleString()} R$${capped ? ' *(cap applied)*' : ''}`, inline: true },
+            { name: 'Weekly cap remaining', value: `${remaining.toLocaleString()} R$ / ${cap.toLocaleString()} R$`, inline: true },
           )
           .setFooter({ text: `Submission ID: #${submission.id} • Upload your recording below` }),
       ],
