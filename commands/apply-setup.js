@@ -79,7 +79,7 @@ module.exports = {
           .setDescription(
             'Click the button below to submit your application.\n' +
             'You\'ll be asked about your channel, content type, and average views.\n\n' +
-            'Applications are reviewed within **48 hours**.'
+            'Applications are reviewed within **24 hours**.'
           )
           .setFooter({ text: 'Godlyo Creator Program • godlyo.com' }),
       ],

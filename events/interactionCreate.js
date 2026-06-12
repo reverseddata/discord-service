@@ -162,7 +162,7 @@ module.exports = {
         embeds: [{
           color: 0xF5A623,
           title: 'Application Submitted 👑',
-          description: 'Your application has been received! We\'ll review it within 48 hours.',
+          description: 'Your application has been received! We\'ll review it within 24 hours.',
           footer: { text: 'Godlyo Creator Program • godlyo.com' },
         }],
         ephemeral: true,
@@ -191,7 +191,9 @@ module.exports = {
       const member = await interaction.guild.members.fetch(userId).catch(() => null);
       if (member) {
         const rolesToAdd = [process.env.CREATOR_ROLE_ID, process.env.TIER3_ROLE_ID].filter(Boolean);
-        await member.roles.add(rolesToAdd).catch(console.error);
+        await member.roles.add(rolesToAdd).catch(e => console.error('Role assignment failed:', e.message));
+      } else {
+        console.error('Could not fetch member:', userId);
       }
 
       // Create private channel
