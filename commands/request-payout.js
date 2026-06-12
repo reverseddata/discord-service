@@ -77,7 +77,8 @@ module.exports = {
         `You have **${eligible.length}** approved submission${eligible.length > 1 ? 's' : ''} eligible for payout.\n\n` +
         `**Eligible Submissions:**\n${subList}\n\n` +
         `**Total eligible: ${totalEligible.toLocaleString()} R$**\n\n` +
-        `Click the button below to submit your payout request.`
+        `Click the button below to submit your payout request.\n\n` +
+        `**Before you click:** Please create a Roblox gamepass and set the price to the exact amount you want to request. You'll need to paste the gamepass link in the next step.`
       )
       .setFooter({ text: 'Minimum payout: 1,000 R$ • Godlyo Creator Program' });
 

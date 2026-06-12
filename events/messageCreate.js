@@ -87,9 +87,11 @@ module.exports = {
     });
 
     if (!staffChannel) {
-      console.error('Staff channel not found, ID:', staffChannelId);
+      console.error('Staff submissions channel not found, ID:', staffChannelId);
       return;
     }
+
+    const isVideo = (proofFile.contentType || '').startsWith('video') || /\.(mp4|mov|webm)$/i.test(proofFile.name || '');
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
@@ -104,13 +106,11 @@ module.exports = {
         .setEmoji('❌')
     );
 
-    const isVideo = (proofFile.contentType || '').startsWith('video') || /\.(mp4|mov|webm)$/i.test(proofFile.name || '');
-
     const staffEmbed = new EmbedBuilder()
       .setColor(GOLD)
-      .setTitle('New Submission — Proof Attached')
+      .setTitle('New Video Submission')
       .addFields(
-        { name: 'Creator', value: `<@${creator.user_id}>`, inline: true },
+        { name: 'Creator', value: `<@${creator.user_id}> (${creator.username || creator.user_id})`, inline: true },
         { name: 'Platform', value: submission.platform, inline: true },
         { name: 'Tier', value: tierName, inline: true },
         { name: 'Video URL', value: submission.video_url },
@@ -119,7 +119,7 @@ module.exports = {
         { name: 'Proof', value: `[${isVideo ? 'View Recording' : 'View Screenshot'}](${proofFile.url})`, inline: true },
         { name: 'Submission ID', value: `#${submission.id}`, inline: true },
       )
-      .setFooter({ text: 'Godlyo Creator Program' });
+      .setFooter({ text: 'Godlyo Creator Program • godlyo.com' });
 
     if (!isVideo) staffEmbed.setImage(proofFile.url);
 

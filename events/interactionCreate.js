@@ -305,7 +305,22 @@ module.exports = {
         const ch = await interaction.guild.channels.fetch(creator.private_channel_id).catch(() => null);
         if (ch) {
           await ch.send({
-            embeds: [approvedEmbed(submission.video_url, submission.views_at_submission, submission.robux_owed)],
+            content: `<@${submission.user_id}>`,
+            embeds: [new EmbedBuilder()
+              .setColor(0x2ECC71)
+              .setTitle('Submission Approved ✅')
+              .addFields(
+                { name: 'Video', value: submission.video_url },
+                { name: 'Views', value: Number(submission.views_at_submission).toLocaleString(), inline: true },
+                { name: 'Robux Earned', value: `${Number(submission.robux_owed).toLocaleString()} R$`, inline: true },
+                { name: 'Status', value: 'Awaiting payout', inline: true },
+              )
+              .setDescription(
+                `Your submission has been approved! 🎉\n\n` +
+                `Once you're ready to request your payout, use \`/request-payout\` in this channel.\n` +
+                `**Minimum payout: 1,000 R$** — you can accumulate multiple approved submissions before requesting.`
+              )
+              .setFooter({ text: 'Godlyo Creator Program • godlyo.com' })],
           });
         }
       }
@@ -323,7 +338,7 @@ module.exports = {
       });
     }
 
-    // ─── Button: Reject Submission ───────────────────────────────────────────
+    // ─── Button: Reject Submission — open reason modal ───────────────────────
     if (interaction.isButton() && interaction.customId.startsWith('reject_submission_')) {
       const staffMember = interaction.member;
       const hasStaffRole = staffMember.roles.cache.has(process.env.STAFF_ROLE_ID);
@@ -333,6 +348,29 @@ module.exports = {
       }
 
       const subId = interaction.customId.replace('reject_submission_', '');
+
+      const modal = new ModalBuilder()
+        .setCustomId(`reject_submission_reason_${subId}`)
+        .setTitle('Reject Submission');
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId('reason')
+            .setLabel('Reason for rejection')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('e.g. Views don\'t match, analytics not visible, fake engagement...')
+            .setRequired(true)
+        )
+      );
+
+      return interaction.showModal(modal);
+    }
+
+    // ─── Modal: Reject Submission Reason ─────────────────────────────────────
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('reject_submission_reason_')) {
+      const subId = interaction.customId.replace('reject_submission_reason_', '');
+      const reason = interaction.fields.getTextInputValue('reason');
       await getDb();
 
       const submission = get('SELECT * FROM submissions WHERE id = ?', [subId]);
@@ -346,10 +384,22 @@ module.exports = {
       if (creator?.private_channel_id) {
         const ch = await interaction.guild.channels.fetch(creator.private_channel_id).catch(() => null);
         if (ch) {
-          await ch.send({ embeds: [rejectedSubmissionEmbed()] });
+          await ch.send({
+            content: `<@${submission.user_id}>`,
+            embeds: [new EmbedBuilder()
+              .setColor(0xE74C3C)
+              .setTitle('Submission Rejected ❌')
+              .setDescription(
+                `Your submission **#${subId}** was not approved.\n\n` +
+                `**Reason:** ${reason}\n\n` +
+                `If you have questions, ping <@&${process.env.STAFF_ROLE_ID}> in this channel.`
+              )
+              .setFooter({ text: 'Godlyo Creator Program • godlyo.com' })],
+          });
         }
       }
 
+      // Update original staff message
       await interaction.update({
         components: [
           new ActionRowBuilder().addComponents(
@@ -381,9 +431,9 @@ module.exports = {
 
       const gampassInput = new TextInputBuilder()
         .setCustomId('gamepass_link')
-        .setLabel('Roblox Gamepass Link (exact amount)')
+        .setLabel('Roblox Gamepass Link')
         .setStyle(TextInputStyle.Short)
-        .setPlaceholder('https://www.roblox.com/game-pass/...')
+        .setPlaceholder('Create a gamepass set to exact payout amount, paste link here')
         .setRequired(true);
 
       modal.addComponents(
